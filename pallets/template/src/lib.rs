@@ -20,12 +20,8 @@ pub mod pallet {
 	}
 
 	impl UserState {
-		pub fn new(
-			last_updated_block: u64,
-			x: u64,
-			y: u64,
-		) -> Self {
-			Self { last_updated_block, x, y}
+		pub fn new(last_updated_block: u64, x: u64, y: u64) -> Self {
+			Self { last_updated_block, x, y }
 		}
 	}
 
@@ -44,9 +40,9 @@ pub mod pallet {
 		/// User added.
 		UserAdded { who: T::AccountId, user_state: UserState },
 		/// User removed.
-		UserRemoved { who: T::AccountId,  user_state: UserState, },
+		UserRemoved { who: T::AccountId, user_state: UserState },
 		/// User info changed.
-		UserInfoChanged { who: T::AccountId, user_state: UserState, },
+		UserInfoChanged { who: T::AccountId, user_state: UserState },
 	}
 
 	#[pallet::error]
@@ -58,7 +54,8 @@ pub mod pallet {
 	}
 
 	#[pallet::storage]
-	pub(super) type UserStateMap<T: Config> = StorageMap<_, Blake2_128Concat, T::AccountId, UserState>;
+	pub(super) type UserStateMap<T: Config> =
+		StorageMap<_, Blake2_128Concat, T::AccountId, UserState>;
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
@@ -81,7 +78,9 @@ pub mod pallet {
 			let sender = ensure_signed(origin)?;
 			ensure!(UserStateMap::<T>::contains_key(&sender), Error::<T>::UserNotFound);
 
-			let user_state = UserStateMap::<T>::get(sender.clone()).unwrap();
+			let block_number = <frame_system::Pallet<T>>::block_number().unique_saturated_into();
+			let mut user_state = UserStateMap::<T>::get(sender.clone()).unwrap();
+			user_state.last_updated_block = block_number;
 			UserStateMap::<T>::remove(&sender);
 			Self::deposit_event(Event::UserRemoved { who: sender, user_state });
 			Ok(())
@@ -99,10 +98,8 @@ pub mod pallet {
 			user_state.x = x;
 			user_state.y = y;
 			UserStateMap::<T>::set(sender.clone(), Some(user_state.clone()));
-			Self::deposit_event(Event::UserInfoChanged { who: sender, user_state});
+			Self::deposit_event(Event::UserInfoChanged { who: sender, user_state });
 			Ok(())
 		}
 	}
 }
-
-
